@@ -1,48 +1,29 @@
-package main
+package 二分查找
 
-import (
-	"archive/zip"
-	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
-)
+import "sort"
 
-func main() {
-	//打包
-	zipFile, err := os.Create("work1.zip")
-	if err != nil {
-		panic(err)
-	}
-	defer zipFile.Close()
+/**
+给一堆香蕉，每一堆中香蕉个数为pile[i], 求每小时吃K根的话，h小时之内把所有堆的香蕉吃完，求最小的K？
 
-	zipWriter := zip.NewWriter(zipFile)
-	defer zipWriter.Close()
-
-	imageURLs := []string{
-		"https://picx.zhimg.com/70/v2-3b4fc7e3a1195a081d0259246c38debc_1440w.avis?source=172ae18b&biz_tag=Post",
-		"https://pic2.zhimg.com/v2-df7fd62e3fffcd9c14c9f82db55a9a3d_r.jpg",
-	}
-	fileSlice := []string{}
-	for i := 1; i <= len(imageURLs); i++ {
-		filename := fmt.Sprintf("image%d.jpg", i)
-		fileSlice = append(fileSlice, filename)
-		response, err := http.Get(imageURLs[i-1])
-		if err != nil {
-			panic(err)
-		}
-		defer response.Body.Close()
-
-		zipFile, err := zipWriter.Create(filepath.Base(filename))
-		if err != nil {
-			panic(err)
-		}
-
-		// 将文件内容写入ZIP文件
-		_, err = io.Copy(zipFile, response.Body)
-		if err != nil {
-			panic(err)
+思路：二分查找 T= O(logn) S= O(1)
+对于每一堆香蕉有pile个，假设吃的K = speed, 那么吃掉这一堆要 「pile/speed「向上取整，==>等价于 [pile+(speed-1)]/speed
+所以，最小速度是1， 最大速度是 max(数量最多的一个堆中的香蕉数量)
+speed 从 1 ~ max 进行二分查找，吃掉每一堆的时间 = [pile+(speed-1)]/speed， 累加起来 <= h 即为最小的 K
+*/
+func minEatingSpeed(piles []int, h int) int {
+	max := 0
+	for _, pile := range piles {
+		if pile > max {
+			max = pile
 		}
 	}
+	//这里加1 是因为sort.Search返回的是 0 ~ (max-1)中的下标，但是吃的速度 K >= 1，所以+1
+	return 1 + sort.Search(max-1, func(speed int) bool {
+		speed++ //这里speed是 0 ~ (max-1) 中的下标【理解起来很关键】
+		time := 0
+		for _, pile := range piles {
+			time += (pile + speed - 1) / speed
+		}
+		return time <= h
+	})
 }
